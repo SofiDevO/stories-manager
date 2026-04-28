@@ -1,4 +1,4 @@
-import type { Comment } from '../entities/Comments';
+import type { Comment } from "../entities/Comments";
 
 export interface ICommentRepository {
   create(comment: Comment): Promise<void>;
