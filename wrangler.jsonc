@@ -4,30 +4,25 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-04-19",
   "observability": {
-    "enabled": true
+    "enabled": true,
   },
-
 
   "triggers": {
-    "crons": [
-      "0 * * * *"
-    ]
+    "crons": ["0 * * * *"],
   },
 
-  // 2. Tu Base de Datos (D1)
   "d1_databases": [
     {
       "binding": "stories_manager",
       "database_name": "stories-manager",
-      "database_id": "bc661fe9-d83b-42a6-bdde-7307937b8bd4"
-    }
+      "database_id": "bc661fe9-d83b-42a6-bdde-7307937b8bd4",
+    },
   ],
 
-  // 3. Conexión al Almacenamiento (R2)
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
-      "bucket_name": "stories-bucket"
-    }
-  ]
+      "bucket_name": "stories-bucket",
+    },
+  ],
 }
