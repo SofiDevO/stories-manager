@@ -3,8 +3,34 @@ import { cors } from "hono/cors";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: (origin, c) => {
+      const allowed = c.env.ASTRO_SITE;
+      return allowed ?? "*";
+    },
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["POST", "GET", "OPTIONS", "DELETE"],
+  }),
+);
 
-app.get("/", (c) => c.text("Stories Manager API"));
+app.get("/", (c) => {
+  return c.json({ message: "Hello Hono!" });
+});
 
-export default app;
+app.get("/api/v1", (c) => c.json({ version: "1" }));
+
+export default {
+  fetch: app.fetch,
+
+  async scheduled(
+    event: ScheduledEvent,
+    env: CloudflareBindings,
+    ctx: ExecutionContext,
+  ) {
+    console.log(
+      `[Cron Trigger] Iniciando limpieza a las ${new Date().toISOString()}`,
+    );
+  },
+};

@@ -6,11 +6,9 @@
   "observability": {
     "enabled": true,
   },
-
   "triggers": {
     "crons": ["0 * * * *"],
   },
-
   "d1_databases": [
     {
       "binding": "stories_manager",
@@ -18,7 +16,6 @@
       "database_id": "bc661fe9-d83b-42a6-bdde-7307937b8bd4",
     },
   ],
-
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
