@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { storiesRouter } from "./api/routes/stories.routes";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -19,7 +20,7 @@ app.get("/", (c) => {
   return c.json({ message: "Hello Hono!" });
 });
 
-app.get("/api/v1", (c) => c.json({ version: "1" }));
+app.route("/api/v1/stories", storiesRouter);
 
 export default {
   fetch: app.fetch,

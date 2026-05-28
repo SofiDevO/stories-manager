@@ -19,4 +19,12 @@ export class D1LikeRepository implements ILikeRepository {
       .first<{ count: number }>();
     return result?.count || 0;
   }
+
+  async hasUserLiked(storyId: string, ipAddress: string): Promise<boolean> {
+    const result = await this.db
+      .prepare("SELECT 1 FROM likes WHERE story_id = ? AND ip_address = ?")
+      .bind(storyId, ipAddress)
+      .first();
+    return result !== null;
+  }
 }

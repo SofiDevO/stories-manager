@@ -1,24 +1,29 @@
 export class HttpError extends Error {
-    public httpCode: number;
-    constructor(message: string, httpCode: number) {
-        super(message);
-        this.httpCode = httpCode;
-    }
+  public httpCode: number;
+  constructor(message: string, httpCode: number) {
+    super(message);
+    this.httpCode = httpCode;
+  }
 }
 
 export class NotFoundError extends HttpError {
-    constructor(message: string) {
-        super(message, 404);
-    }
+  constructor(message: string) {
+    super(message, 404);
+  }
 }
 export class UnauthorizedError extends HttpError {
-    constructor(message: string) {
-        super(message, 403);
-    }
+  constructor(message: string) {
+    super(message, 403);
+  }
 }
 
 export class BadRequestError extends HttpError {
-    constructor(message: string) {
-        super(message, 400);
-    }
+  constructor(message: string) {
+    super(message, 400);
+  }
+}
+export class ServerError extends HttpError {
+  constructor(message: string) {
+    super(message, 500);
+  }
 }
