@@ -26,5 +26,4 @@ storiesRouter.post(
 );
 
 // admin routes
-
 storiesRouter.post("/", authMiddleware, StroriesController.create);
