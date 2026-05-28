@@ -4,6 +4,7 @@ import { AddCommentUseCase } from "../../application/use-cases/AddCommentUseCase
 import { CreateStoryUseCase } from "../../application/use-cases/CreateStoryUseCase";
 import { D1CommentRepository } from "../../infrastructure/repositories/D1CommentRepository";
 import { D1ModerationRepository } from "../../infrastructure/repositories/D1ModerationRepository";
+import { R2StorageService } from "../../infrastructure/storage/R2StorageService";
 
 export class StroriesController {
   static async getActive(c: Context) {
