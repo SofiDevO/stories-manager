@@ -5,7 +5,7 @@ export class D1ModerationRepository implements IModerationRepository {
 
     async banIp(ipAddress: string, reason?: string): Promise<void> {
         await this.db.prepare(
-            'INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?)'
+            'INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?, ?)'
         ).bind(ipAddress, reason || null, new Date().toISOString()).run();
     }
     async isIpBanned(ipAddress: string): Promise<boolean> {

@@ -6,7 +6,7 @@ export class D1LikeRepository implements ILikeRepository {
   async addLike(storyId: string, ipAddress: string): Promise<void> {
     await this.db
       .prepare(
-        "INSERT OR IGNORE INTO likes (stori_id, ip_address, created_at) VALUES(?,?,?)",
+        "INSERT OR IGNORE INTO likes (story_id, ip_address, created_at) VALUES (?, ?, ?)",
       )
       .bind(storyId, ipAddress, new Date().toISOString())
       .run();

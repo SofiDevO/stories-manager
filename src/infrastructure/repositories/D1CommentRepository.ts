@@ -7,7 +7,7 @@ export class D1CommentRepository implements ICommentRepository {
   async create(comment: Comment): Promise<void> {
     await this.db
       .prepare(
-        "INSERT INTO comment(id,story_id, content, ip_address as ipAddress, created_at as createdAt FROM comments WHERE story_id= ? ORDER BY created_at ASC )",
+        "INSERT INTO comments (id, story_id, content, ip_address, created_at) VALUES (?, ?, ?, ?, ?)",
       )
       .bind(
         comment.id,

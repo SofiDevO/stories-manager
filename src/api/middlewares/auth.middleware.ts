@@ -9,7 +9,7 @@ type Env = {
 
 export const authMiddleware = createMiddleware<Env>(async (c, next) => {
   if (!c.env.JWT_SECRET) {
-    return c.json({ error: "Missing JWT" });
+    return c.json({ error: "Missing JWT_SECRET configuration" }, 500);
   }
   const jwtMiddleware = jwt({
     secret: c.env.JWT_SECRET,

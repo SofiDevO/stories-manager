@@ -1,7 +1,7 @@
 # Stories Manager
 
-> **Estado:** Alpha — capa de API operativa  
-> **Última actualización:** 27 de mayo de 2026
+> **Estado:** Alpha — capa de API operativa
+> **Última actualización:** 29 de mayo de 2026
 
 API REST serverless para gestionar **historias efímeras en video** (al estilo Instagram/WhatsApp Stories), desplegada sobre **Cloudflare Workers** con arquitectura limpia (Clean Architecture / DDD).
 
@@ -21,21 +21,21 @@ API REST serverless para gestionar **historias efímeras en video** (al estilo I
 10. [Base de datos](#base-de-datos)
 11. [Configuración](#configuración)
 12. [Comandos](#comandos)
-13. [Bugs conocidos](#bugs-conocidos)
+13. [Correcciones aplicadas](#correcciones-aplicadas)
 
 ---
 
 ## Stack tecnológico
 
-| Tecnología | Versión | Rol |
-|---|---|---|
-| **TypeScript** | ESNext | Lenguaje principal |
-| **Hono** | ^4.12.14 | Framework web para Cloudflare Workers |
-| **Cloudflare Workers** | — | Runtime serverless en el edge |
-| **Cloudflare D1** | — | Base de datos SQLite serverless |
-| **Cloudflare R2** | — | Almacenamiento de objetos (videos) |
-| **Wrangler** | ^4.4.0 | CLI para desarrollo y despliegue |
-| **pnpm** | — | Gestor de paquetes |
+| Tecnología             | Versión  | Rol                                   |
+| ---------------------- | -------- | ------------------------------------- |
+| **TypeScript**         | ESNext   | Lenguaje principal                    |
+| **Hono**               | ^4.12.14 | Framework web para Cloudflare Workers |
+| **Cloudflare Workers** | —        | Runtime serverless en el edge         |
+| **Cloudflare D1**      | —        | Base de datos SQLite serverless       |
+| **Cloudflare R2**      | —        | Almacenamiento de objetos (videos)    |
+| **Wrangler**           | ^4.4.0   | CLI para desarrollo y despliegue      |
+| **pnpm**               | —        | Gestor de paquetes                    |
 
 ---
 
@@ -98,10 +98,10 @@ stories-manager/
 │       │   └── schema.sql
 │       ├── repositories/
 │       │   ├── D1StoryRepository.ts      # ✅ Implementado
-│       │   ├── D1CommentRepository.ts    # ✅ Implementado (⚠️ bug en INSERT)
+│       │   ├── D1CommentRepository.ts    # ✅ Implementado
 │       │   ├── D1LikeRepository.ts       # ✅ Implementado
 │       │   ├── D1ModerationRepository.ts # ✅ Implementado
-│       │   └── D!AdminRepository.ts      # ⚠️ Nombre de archivo con typo
+│       │   └── D1AdminRepository.ts      # ✅ Implementado
 │       └── storage/
 │           └── R2StorageService.ts       # ✅ Implementado (AWS SDK v3 + S3 presigned)
 ├── package.json
@@ -116,38 +116,42 @@ stories-manager/
 ### Entidades
 
 #### `Story`
+
 ```typescript
 interface Story {
-  id: string;        // UUID único
-  videoUrl: string;  // URL del video en R2
+  id: string; // UUID único
+  videoUrl: string; // URL del video en R2
   createdAt: string; // Timestamp ISO 8601
 }
 ```
 
 #### `Comment`
+
 ```typescript
 interface Comment {
-  id: string;        // UUID único
-  storyId: string;   // Referencia a la Story
-  content: string;   // Texto del comentario
+  id: string; // UUID único
+  storyId: string; // Referencia a la Story
+  content: string; // Texto del comentario
   ipAddress: string; // IP del autor (para moderación)
   createdAt: string; // Timestamp ISO 8601
 }
 ```
 
 #### `Like`
+
 ```typescript
 interface Like {
-  storyId: string;   // Historia que recibió el like
+  storyId: string; // Historia que recibió el like
   ipAddress: string; // IP del usuario (clave de unicidad)
   createdAt: string; // Timestamp ISO 8601
 }
 ```
 
 #### `Admin`
+
 ```typescript
 interface Admin {
-  username: string;     // Nombre de usuario único
+  username: string; // Nombre de usuario único
   passwordHash: string; // Hash bcrypt de la contraseña
 }
 ```
@@ -155,43 +159,49 @@ interface Admin {
 ### Interfaces de Repositorios
 
 #### `IStoryRepository`
-| Método | Descripción |
-|---|---|
-| `create(story)` | Persiste una nueva historia |
-| `getActiveStories()` | Retorna las historias que no han expirado |
+
+| Método                   | Descripción                                 |
+| ------------------------ | ------------------------------------------- |
+| `create(story)`          | Persiste una nueva historia                 |
+| `getActiveStories()`     | Retorna las historias que no han expirado   |
 | `deleteExpiredStories()` | Limpieza automática (ejecutada por el cron) |
 
 #### `ICommentRepository`
-| Método | Descripción |
-|---|---|
-| `create(comment)` | Agrega un comentario a una historia |
-| `getByStoryId(storyId)` | Lista comentarios de una historia |
-| `deleteById(commentId)` | Eliminación administrativa |
+
+| Método                    | Descripción                                 |
+| ------------------------- | ------------------------------------------- |
+| `create(comment)`         | Agrega un comentario a una historia         |
+| `getByStoryId(storyId)`   | Lista comentarios de una historia           |
+| `deleteById(commentId)`   | Eliminación administrativa                  |
 | `deleteExpiredComments()` | Limpieza automática (ejecutada por el cron) |
 
 #### `ILikeRepository`
-| Método | Descripción |
-|---|---|
-| `addLike(storyId, ipAddress)` | Registra un like |
-| `getLikesCount(storyId)` | Cuenta total de likes |
+
+| Método                             | Descripción                |
+| ---------------------------------- | -------------------------- |
+| `addLike(storyId, ipAddress)`      | Registra un like           |
+| `getLikesCount(storyId)`           | Cuenta total de likes      |
 | `hasUserLiked(storyId, ipAddress)` | Verifica duplicados por IP |
 
 #### `IModerationRepository`
-| Método | Descripción |
-|---|---|
-| `banIp(ipAddress, reason?)` | Banea una IP con razón opcional |
-| `isIpBanned(ipAddress)` | Consulta usada en middleware de acceso |
-| `getBannedIps()` | Lista todas las IPs baneadas |
-| `unBanIp(ipAddress)` | Levanta el baneo |
+
+| Método                      | Descripción                            |
+| --------------------------- | -------------------------------------- |
+| `banIp(ipAddress, reason?)` | Banea una IP con razón opcional        |
+| `isIpBanned(ipAddress)`     | Consulta usada en middleware de acceso |
+| `getBannedIps()`            | Lista todas las IPs baneadas           |
+| `unBanIp(ipAddress)`        | Levanta el baneo                       |
 
 #### `IStorageService`
-| Método | Descripción |
-|---|---|
+
+| Método                        | Descripción                                     |
+| ----------------------------- | ----------------------------------------------- |
 | `generateUploadUrl(fileName)` | Genera URL pre-firmada para subida directa a R2 |
 
 #### `IAdminRepository`
-| Método | Descripción |
-|---|---|
+
+| Método                     | Descripción                                   |
+| -------------------------- | --------------------------------------------- |
 | `findByUsername(username)` | Recupera el admin para verificar credenciales |
 
 ---
@@ -207,6 +217,7 @@ Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **
 **Firma:** `execute(): Promise<{ uploadUrl: string; storyId: string }>`
 
 **Flujo interno:**
+
 1. Genera un `storyId` con `crypto.randomUUID()`.
 2. Construye el `fileName` con el patrón `stories/{storyId}.mp4`.
 3. Llama a `IStorageService.generateUploadUrl(fileName)` → obtiene URL pre-firmada S3.
@@ -223,6 +234,7 @@ Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **
 **Firma:** `execute(storyId, content, ipAddress): Promise<void>`
 
 **Flujo interno:**
+
 1. Consulta `IModerationRepository.isIpBanned(ipAddress)` → lanza `UnauthorizedError` (HTTP 403) si está baneada.
 2. Valida que `content` no sea vacío → lanza `BadRequestError` (HTTP 400).
 3. Construye la entidad `Comment` con `crypto.randomUUID()` como `id` y `content.trim()`.
@@ -230,11 +242,11 @@ Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **
 
 ### Casos de uso pendientes
 
-| Caso de uso | Descripción |
-|---|---|
-| `AddLikeUseCase` | Verifica duplicado por IP y registra el like |
-| `LoginAdminUseCase` | Verifica credenciales y emite JWT |
-| `BanIpUseCase` | Banea una IP (acción administrativa) |
+| Caso de uso               | Descripción                                   |
+| ------------------------- | --------------------------------------------- |
+| `AddLikeUseCase`          | Verifica duplicado por IP y registra el like  |
+| `LoginAdminUseCase`       | Verifica credenciales y emite JWT             |
+| `BanIpUseCase`            | Banea una IP (acción administrativa)          |
 | `CleanExpiredDataUseCase` | Limpia stories y comentarios expirados (cron) |
 
 ---
@@ -248,13 +260,16 @@ Instancia la aplicación Hono con tipado de bindings de Cloudflare y configura C
 ```typescript
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-app.use("*", cors({
-  origin: (origin, c) => c.env.ASTRO_SITE ?? "*",  // origen dinámico desde env
-  allowHeaders: ["Content-Type", "Authorization"],
-  allowMethods: ["POST", "GET", "OPTIONS", "DELETE"],
-}));
+app.use(
+  "*",
+  cors({
+    origin: (origin, c) => c.env.ASTRO_SITE ?? "*", // origen dinámico desde env
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["POST", "GET", "OPTIONS", "DELETE"],
+  }),
+);
 
-app.route("/api/v1/stories", storiesRouter);  // único router montado
+app.route("/api/v1/stories", storiesRouter); // único router montado
 ```
 
 El `scheduled` handler del cron está registrado pero aún sin lógica de limpieza:
@@ -263,7 +278,9 @@ El `scheduled` handler del cron está registrado pero aún sin lógica de limpie
 export default {
   fetch: app.fetch,
   async scheduled(event, env, ctx) {
-    console.log(`[Cron Trigger] Iniciando limpieza a las ${new Date().toISOString()}`);
+    console.log(
+      `[Cron Trigger] Iniciando limpieza a las ${new Date().toISOString()}`,
+    );
     // TODO: invocar CleanExpiredDataUseCase
   },
 };
@@ -276,7 +293,7 @@ Define un sub-router Hono tipado montado en `/api/v1/stories`:
 ```typescript
 type Env = {
   Bindings: { stories_manager: D1Database; JWT_SECRET: string };
-  Variables: { clientIp: string };  // propagada por ipBanMiddleware
+  Variables: { clientIp: string }; // propagada por ipBanMiddleware
 };
 
 export const storiesRouter = new Hono<Env>();
@@ -284,36 +301,39 @@ export const storiesRouter = new Hono<Env>();
 
 #### Rutas operativas
 
-| Método | Ruta completa | Middlewares | Controlador | Auth |
-|---|---|---|---|---|
-| `GET` | `/api/v1/stories` | — | `getActive` | No |
+| Método | Ruta completa                  | Middlewares       | Controlador  | Auth          |
+| ------ | ------------------------------ | ----------------- | ------------ | ------------- |
+| `GET`  | `/api/v1/stories`              | —                 | `getActive`  | No            |
 | `POST` | `/api/v1/stories/:id/comments` | `ipBanMiddleware` | `addComment` | No (IP check) |
-| `POST` | `/api/v1/stories` | `authMiddleware` | `create` | JWT |
+| `POST` | `/api/v1/stories`              | `authMiddleware`  | `create`     | JWT           |
 
 #### Rutas pendientes
 
-| Método | Ruta | Descripción | Auth |
-|---|---|---|---|
-| `GET` | `/api/v1/stories/:id/comments` | Listar comentarios | No |
-| `DELETE` | `/api/v1/stories/:id` | Eliminar story | Admin |
-| `POST` | `/api/v1/stories/:id/likes` | Dar like | No (IP check) |
-| `GET` | `/api/v1/stories/:id/likes` | Conteo de likes | No |
-| `GET` | `/api/v1/admin/bans` | IPs baneadas | Admin |
-| `POST` | `/api/v1/admin/bans` | Banear IP | Admin |
-| `DELETE` | `/api/v1/admin/bans/:ip` | Desbanear IP | Admin |
-| `POST` | `/api/v1/auth/login` | Login admin | No |
+| Método   | Ruta                           | Descripción        | Auth          |
+| -------- | ------------------------------ | ------------------ | ------------- |
+| `GET`    | `/api/v1/stories/:id/comments` | Listar comentarios | No            |
+| `DELETE` | `/api/v1/stories/:id`          | Eliminar story     | Admin         |
+| `POST`   | `/api/v1/stories/:id/likes`    | Dar like           | No (IP check) |
+| `GET`    | `/api/v1/stories/:id/likes`    | Conteo de likes    | No            |
+| `GET`    | `/api/v1/admin/bans`           | IPs baneadas       | Admin         |
+| `POST`   | `/api/v1/admin/bans`           | Banear IP          | Admin         |
+| `DELETE` | `/api/v1/admin/bans/:ip`       | Desbanear IP       | Admin         |
+| `POST`   | `/api/v1/auth/login`           | Login admin        | No            |
 
 ### Controlador — `src/api/controllers/stories.controller.ts`
 
 Clase con métodos estáticos que actúan como handlers de Hono. Cada método instancia sus dependencias directamente desde `c.env` (sin inyección de dependencias externa).
 
 #### `getActive(c)`
+
 Llama a `D1StoryRepository.getActiveStories()` y retorna `{ success: true, data: stories }` con HTTP 200. Sin manejo de errores (asume que D1 siempre responde).
 
 #### `create(c)` — requiere JWT
+
 Instancia `R2StorageService` con las credenciales de cuenta de Cloudflare (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ACCESS_KEY`, `CLOUDFLARE_SECRET_KEY`) y ejecuta `CreateStoryUseCase`. Retorna `{ uploadUrl, storyId }` con HTTP 201 o `{ error }` con HTTP 500.
 
 #### `addComment(c)` — requiere IP no baneada
+
 1. Extrae `storyId` de `c.req.param("id")` — lanza `Error` si es `undefined`.
 2. Lee `body.content` de `c.req.json()`.
 3. Obtiene la IP del cliente desde la variable de contexto `clientIp` (inyectada por `ipBanMiddleware`).
@@ -339,16 +359,14 @@ Usa el helper `createMiddleware` de `hono/factory` para mantener el tipado gené
 ```typescript
 // Lee la IP real del header de Cloudflare y consulta la tabla banned_ips
 export const ipBanMiddleware = createMiddleware<Env>(async (c, next) => {
-  const clientIp = c.req.header("cf-conecting-ip") || "";  // ⚠️ typo en header
+  const clientIp = c.req.header("cf-connecting-ip") || ""; // header correcto de Cloudflare
   const moderationRepo = new D1ModerationRepository(c.env.stories_manager);
   const isBanned = await moderationRepo.isIpBanned(clientIp);
   if (isBanned) return c.json({ success: false, error: "FORBIDDEN" }, 403);
-  c.set("clientIp", clientIp);  // propaga IP a los handlers siguientes
+  c.set("clientIp", clientIp); // propaga IP a los handlers siguientes
   await next();
 });
 ```
-
-> ⚠️ **Bug conocido:** el nombre del header está mal escrito (`cf-conecting-ip` en lugar de `cf-connecting-ip`). Esto hará que la IP siempre se lea como cadena vacía en producción.
 
 ---
 
@@ -360,43 +378,43 @@ Todos los repositorios reciben un `D1Database` por constructor y usan la API de 
 
 #### `D1StoryRepository` ✅
 
-| Método | Query | Notas |
-|---|---|---|
-| `create` | `INSERT INTO stories (id, video_url, created_at)` | — |
-| `getActiveStories` | `WHERE created_at > datetime('now', '-1 day')` | Alias camelCase via `AS` |
-| `deleteExpiredStories` | `WHERE created_at <= datetime('now','-1 day')` | Para el cron |
+| Método                 | Query                                             | Notas                    |
+| ---------------------- | ------------------------------------------------- | ------------------------ |
+| `create`               | `INSERT INTO stories (id, video_url, created_at)` | —                        |
+| `getActiveStories`     | `WHERE created_at > datetime('now', '-1 day')`    | Alias camelCase via `AS` |
+| `deleteExpiredStories` | `WHERE created_at <= datetime('now','-1 day')`    | Para el cron             |
 
 El período de expiración está hardcodeado en **24 horas**.
 
-#### `D1CommentRepository` ✅ ⚠️
+#### `D1CommentRepository` ✅
 
-| Método | Query | Notas |
-|---|---|---|
-| `create` | `INSERT INTO comment(...)` | ⚠️ **Bug:** SQL malformado (mezcla INSERT y SELECT) |
-| `getByStoryId` | `SELECT ... FROM comments WHERE story_id = ?` | Alias camelCase correctos |
-| `deleteById` | `DELETE FROM comments WHERE id = ?` | — |
-| `deleteExpiredComments` | `WHERE created_at <= datetime('now', '-1 day')` | Para el cron |
+| Método                  | Query                                                                                     | Notas                     |
+| ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
+| `create`                | `INSERT INTO comments (id, story_id, content, ip_address, created_at) VALUES (?,?,?,?,?)` | ✅ SQL corregido          |
+| `getByStoryId`          | `SELECT ... FROM comments WHERE story_id = ?`                                             | Alias camelCase correctos |
+| `deleteById`            | `DELETE FROM comments WHERE id = ?`                                                       | —                         |
+| `deleteExpiredComments` | `WHERE created_at <= datetime('now', '-1 day')`                                           | Para el cron              |
 
 #### `D1LikeRepository` ✅
 
-| Método | Query | Notas |
-|---|---|---|
-| `addLike` | `INSERT OR IGNORE INTO likes (stori_id, ...)` | ⚠️ Typo: `stori_id` en lugar de `story_id` |
-| `getLikesCount` | `SELECT COUNT(*) as count WHERE story_id = ?` | `.first<{count:number}>()` |
-| `hasUserLiked` | `SELECT 1 WHERE story_id = ? AND ip_address = ?` | Retorna `result !== null` |
+| Método          | Query                                                                           | Notas                           |
+| --------------- | ------------------------------------------------------------------------------- | ------------------------------- |
+| `addLike`       | `INSERT OR IGNORE INTO likes (story_id, ip_address, created_at) VALUES (?,?,?)` | ✅ Columna `story_id` corregida |
+| `getLikesCount` | `SELECT COUNT(*) as count FROM likes WHERE story_id = ?`                        | `.first<{count:number}>()`      |
+| `hasUserLiked`  | `SELECT 1 FROM likes WHERE story_id = ? AND ip_address = ?`                     | Retorna `result !== null`       |
 
 #### `D1ModerationRepository` ✅
 
-| Método | Query | Notas |
-|---|---|---|
-| `banIp` | `INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at)` | ⚠️ Solo 2 `?` en el bind, pero se pasan 3 valores |
-| `isIpBanned` | `SELECT ip_address WHERE ip_address = ?` | Retorna `result !== null` |
-| `getBannedIps` | `SELECT ip_address as ipAddress, banned_at as bannedAt` | Orden DESC |
-| `unBanIp` | `DELETE FROM banned_ips WHERE ip_address = ?` | — |
+| Método         | Query                                                                               | Notas                     |
+| -------------- | ----------------------------------------------------------------------------------- | ------------------------- |
+| `banIp`        | `INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?, ?)` | ✅ Corregido a 3 `?`      |
+| `isIpBanned`   | `SELECT ip_address FROM banned_ips WHERE ip_address = ?`                            | Retorna `result !== null` |
+| `getBannedIps` | `SELECT ip_address as ipAddress, banned_at as bannedAt`                             | Orden DESC                |
+| `unBanIp`      | `DELETE FROM banned_ips WHERE ip_address = ?`                                       | —                         |
 
 ### `R2StorageService` ✅
 
-**Archivo:** `src/infrastructure/storage/R2StorageService.ts`  
+**Archivo:** `src/infrastructure/storage/R2StorageService.ts`
 **Dependencias:** `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`
 
 Implementa `IStorageService` usando el SDK de AWS v3, aprovechando la compatibilidad S3 de Cloudflare R2:
@@ -439,6 +457,7 @@ class ServerError      extends HttpError  // 500
 ```
 
 Uso actual en `AddCommentUseCase`:
+
 - `UnauthorizedError` — IP baneada
 - `BadRequestError` — contenido vacío
 
@@ -452,9 +471,9 @@ Configurado en `wrangler.jsonc` (excluido de git para proteger credenciales de p
 
 ```jsonc
 {
-  "binding": "stories_manager",      // c.env.stories_manager en el Worker
+  "binding": "stories_manager", // c.env.stories_manager en el Worker
   "database_name": "stories-manager",
-  "database_id": "bc661fe9-..."
+  "database_id": "bc661fe9-...",
 }
 ```
 
@@ -462,8 +481,8 @@ Configurado en `wrangler.jsonc` (excluido de git para proteger credenciales de p
 
 ```jsonc
 {
-  "binding": "R2_BUCKET",            // c.env.R2_BUCKET en el Worker
-  "bucket_name": "stories-bucket"
+  "binding": "R2_BUCKET", // c.env.R2_BUCKET en el Worker
+  "bucket_name": "stories-bucket",
 }
 ```
 
@@ -531,12 +550,12 @@ wrangler d1 execute stories-manager --file=src/infrastructure/db/schema.sql
 
 ### TypeScript (`tsconfig.json`)
 
-| Opción | Valor | Justificación |
-|---|---|---|
-| `target` | `ESNext` | Workers soportan JS moderno completamente |
-| `moduleResolution` | `Bundler` | Compatible con Wrangler (esbuild) |
-| `strict` | `true` | Máxima seguridad de tipos |
-| `jsxImportSource` | `hono/jsx` | Runtime JSX de Hono en lugar de React |
+| Opción             | Valor      | Justificación                             |
+| ------------------ | ---------- | ----------------------------------------- |
+| `target`           | `ESNext`   | Workers soportan JS moderno completamente |
+| `moduleResolution` | `Bundler`  | Compatible con Wrangler (esbuild)         |
+| `strict`           | `true`     | Máxima seguridad de tipos                 |
+| `jsxImportSource`  | `hono/jsx` | Runtime JSX de Hono en lugar de React     |
 
 ### Generar tipos de Cloudflare
 
@@ -548,7 +567,7 @@ Genera `worker-configuration.d.ts` con los tipos de los bindings. Luego úsalos 
 
 ```ts
 // src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
+const app = new Hono<{ Bindings: CloudflareBindings }>();
 ```
 
 ---
@@ -568,17 +587,3 @@ pnpm deploy
 # Generar tipos de bindings de Cloudflare
 pnpm cf-typegen
 ```
-
----
-
-## Bugs conocidos
-
-| Archivo | Descripción | Severidad |
-|---|---|---|
-| `D1LikeRepository.ts` | `INSERT` usa `stori_id` en lugar de `story_id` | 🔴 Alta — falla silenciosamente en producción |
-| `D1CommentRepository.ts` | SQL del `create` está malformado (mezcla INSERT y SELECT) | 🔴 Alta — toda inserción fallará en runtime |
-| `D1ModerationRepository.ts` | `banIp` pasa 3 valores al `.bind()` pero el SQL solo tiene 2 `?` | 🔴 Alta — lanzará error en runtime |
-| `ipBanMiddleware.ts` | Header `cf-conecting-ip` (typo) → IP siempre vacía en producción | 🔴 Alta — el ban nunca se aplica correctamente |
-| `stories.controller.ts` | `authMiddleware` sin código HTTP cuando falta `JWT_SECRET` | 🟡 Media — respuesta malformada |
-| `D!AdminRepository.ts` | Nombre del archivo contiene `!` en lugar de `1` | 🟡 Media — puede causar errores de importación |
-| `stories.controller.ts` | Errores en `addComment` siempre retornan HTTP 403 sin distinción por tipo | 🟡 Media — debería mapear `BadRequestError` → 400, `UnauthorizedError` → 403 |

@@ -11,7 +11,7 @@ type Env = {
 };
 
 export const ipBanMiddleware = createMiddleware<Env>(async (c, next) => {
-  const clientIp = c.req.header("cf-conecting-ip") || "";
+  const clientIp = c.req.header("cf-connecting-ip") || "";
 
   const moderationRepo = new D1ModerationRepository(c.env.stories_manager);
 

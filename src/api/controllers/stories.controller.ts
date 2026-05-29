@@ -5,13 +5,26 @@ import { CreateStoryUseCase } from "../../application/use-cases/CreateStoryUseCa
 import { D1CommentRepository } from "../../infrastructure/repositories/D1CommentRepository";
 import { D1ModerationRepository } from "../../infrastructure/repositories/D1ModerationRepository";
 import { R2StorageService } from "../../infrastructure/storage/R2StorageService";
+import { GetActiveStoriesUseCase } from "../../application/use-cases/GetActiveStoriesUseCase";
+import { UnauthorizedError, BadRequestError } from "../../helpers/error";
 
 export class StroriesController {
   static async getActive(c: Context) {
-    const storyRepo = new D1StoryRepository(c.env.stories_manager);
-    const stories = await storyRepo.getActiveStories();
+    try {
+      const storyRepo = new D1StoryRepository(c.env.stories_manager);
+      const useCase = new GetActiveStoriesUseCase(storyRepo);
+      const stories = await useCase.execute();
 
-    return c.json({ success: true, data: stories }, 200);
+      return c.json({ success: true, data: stories }, 200);
+    } catch (error: any) {
+      return c.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        500,
+      );
+    }
   }
 
   static async create(c: Context) {
@@ -43,6 +56,7 @@ export class StroriesController {
       );
     }
   }
+
   static async addComment(c: Context) {
     try {
       const storyId = c.req.param("id");
@@ -61,7 +75,14 @@ export class StroriesController {
 
       return c.json({ success: true, message: "Comment added" }, 201);
     } catch (error: any) {
-      return c.json({ success: false, error: error.message }, 403);
+      if (error instanceof UnauthorizedError) {
+        return c.json({ success: false, error: error.message }, 403);
+      }
+      if (error instanceof BadRequestError) {
+        return c.json({ success: false, error: error.message }, 400);
+      }
+      return c.json({ success: false, error: error.message }, 500);
     }
   }
 }
+
