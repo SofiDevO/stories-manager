@@ -22,6 +22,29 @@ API REST serverless para gestionar **historias efímeras en video** (al estilo I
 11. [Configuración](#configuración)
 12. [Comandos](#comandos)
 13. [Correcciones aplicadas](#correcciones-aplicadas)
+14. [Lecciones y Documentación Detallada](#lecciones-y-documentación-detallada)
+
+---
+
+## Lecciones y Documentación Detallada
+
+A lo largo del código fuente hemos incluido una serie de lecciones (archivos Markdown) que explican el **por qué** de nuestras decisiones arquitectónicas, capa por capa. Son ideales como menú de lectura para entender a fondo la aplicación:
+
+### Visión General
+*  **[Arquitectura General y Hono](./src/ARCHITECTURE.md):** Clean Architecture, el patrón de "Cebolla", y por qué usamos Hono.
+*  **[Punto de Entrada (Index)](./src/README.md):** Inicialización de Cloudflare Workers, CORS y eventos de Cron.
+
+### Capas de la Arquitectura
+*  **[Entidades de Dominio](./src/domain/entities/README.md):** El núcleo de la aplicación, interfaces agnósticas y el lenguaje ubicuo.
+*  **[Interfaces de Repositorios](./src/domain/repositories/README.md):** Contratos de dominio y abstracción de datos.
+*  **[Casos de Uso (Reglas de Negocio)](./src/application/use-cases/README.md):** Lógica pura, inyección de dependencias y validaciones centrales.
+*  **[Controladores (Orquestadores)](./src/api/controllers/README.md):** Traductores entre HTTP/JSON y los casos de uso.
+*  **[Middlewares (Guardias)](./src/api/middlewares/README.md):** Protección de rutas, autenticación JWT y baneo de IPs.
+*  **[Rutas y Endpoints](./src/api/routes/README.md):** Enrutamiento declarativo en Hono.
+*  **[Implementación de Repositorios (D1)](./src/infrastructure/repositories/README.md):** Consultas preparadas en SQL puro sobre Cloudflare D1.
+*  **[Servicio de Almacenamiento (R2)](./src/infrastructure/storage/README.md):** Generación de "Presigned URLs" para cargas directas.
+*  **[Esquema de Base de Datos](./src/infrastructure/db/README.md):** Integridad referencial, claves foráneas y cascadas en SQLite.
+*  **[Manejo de Errores (Helpers)](./src/helpers/README.md):** Clases de error personalizadas y traducción de códigos HTTP.
 
 ---
 
@@ -66,20 +89,20 @@ stories-manager/
 ├── src/
 │   ├── index.ts                         # Punto de entrada: app Hono + cron handler
 │   ├── helpers/
-│   │   └── error.ts                     # ✅ Jerarquía de errores HTTP tipados
+│   │   └── error.ts                     #  Jerarquía de errores HTTP tipados
 │   ├── api/
 │   │   ├── controllers/
-│   │   │   └── stories.controller.ts    # ✅ StroriesController (3 métodos estáticos)
+│   │   │   └── stories.controller.ts    #  StroriesController (3 métodos estáticos)
 │   │   ├── middlewares/
-│   │   │   ├── auth.middleware.ts        # ✅ Validación JWT via hono/jwt
-│   │   │   └── ipBan.middleware.ts       # ✅ Bloqueo de IPs baneadas
+│   │   │   ├── auth.middleware.ts        #  Validación JWT via hono/jwt
+│   │   │   └── ipBan.middleware.ts       #  Bloqueo de IPs baneadas
 │   │   └── routes/
-│   │       └── stories.routes.ts        # ✅ Router montado en /api/v1/stories
+│   │       └── stories.routes.ts        #  Router montado en /api/v1/stories
 │   ├── application/
 │   │   ├── dtos/                        # (pendiente)
 │   │   └── use-cases/
-│   │       ├── AddCommentUseCase.ts     # ✅ Implementado
-│   │       └── CreateStoryUseCase.ts    # ✅ Implementado
+│   │       ├── AddCommentUseCase.ts     #  Implementado
+│   │       └── CreateStoryUseCase.ts    #  Implementado
 │   ├── domain/
 │   │   ├── entities/
 │   │   │   ├── Admin.ts
@@ -97,13 +120,13 @@ stories-manager/
 │       ├── db/
 │       │   └── schema.sql
 │       ├── repositories/
-│       │   ├── D1StoryRepository.ts      # ✅ Implementado
-│       │   ├── D1CommentRepository.ts    # ✅ Implementado
-│       │   ├── D1LikeRepository.ts       # ✅ Implementado
-│       │   ├── D1ModerationRepository.ts # ✅ Implementado
-│       │   └── D1AdminRepository.ts      # ✅ Implementado
+│       │   ├── D1StoryRepository.ts      #  Implementado
+│       │   ├── D1CommentRepository.ts    #  Implementado
+│       │   ├── D1LikeRepository.ts       #  Implementado
+│       │   ├── D1ModerationRepository.ts #  Implementado
+│       │   └── D1AdminRepository.ts      #  Implementado
 │       └── storage/
-│           └── R2StorageService.ts       # ✅ Implementado (AWS SDK v3 + S3 presigned)
+│           └── R2StorageService.ts       #  Implementado (AWS SDK v3 + S3 presigned)
 ├── package.json
 ├── tsconfig.json
 └── wrangler.jsonc
@@ -210,7 +233,7 @@ interface Admin {
 
 Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **No depende** de Cloudflare, SQL ni HTTP.
 
-### `CreateStoryUseCase` ✅
+### `CreateStoryUseCase` 
 
 **Archivo:** `src/application/use-cases/CreateStoryUseCase.ts`
 
@@ -227,7 +250,7 @@ Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **
 
 > La URL pre-firmada tiene una vigencia de **3600 segundos** (1 hora).
 
-### `AddCommentUseCase` ✅
+### `AddCommentUseCase` 
 
 **Archivo:** `src/application/use-cases/AddCommentUseCase.ts`
 
@@ -376,7 +399,7 @@ export const ipBanMiddleware = createMiddleware<Env>(async (c, next) => {
 
 Todos los repositorios reciben un `D1Database` por constructor y usan la API de D1 (`prepare → bind → run/first/all`) con parámetros posicionales para prevenir SQL injection.
 
-#### `D1StoryRepository` ✅
+#### `D1StoryRepository` 
 
 | Método                 | Query                                             | Notas                    |
 | ---------------------- | ------------------------------------------------- | ------------------------ |
@@ -386,33 +409,33 @@ Todos los repositorios reciben un `D1Database` por constructor y usan la API de 
 
 El período de expiración está hardcodeado en **24 horas**.
 
-#### `D1CommentRepository` ✅
+#### `D1CommentRepository` 
 
 | Método                  | Query                                                                                     | Notas                     |
 | ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
-| `create`                | `INSERT INTO comments (id, story_id, content, ip_address, created_at) VALUES (?,?,?,?,?)` | ✅ SQL corregido          |
+| `create`                | `INSERT INTO comments (id, story_id, content, ip_address, created_at) VALUES (?,?,?,?,?)` |  SQL corregido          |
 | `getByStoryId`          | `SELECT ... FROM comments WHERE story_id = ?`                                             | Alias camelCase correctos |
 | `deleteById`            | `DELETE FROM comments WHERE id = ?`                                                       | —                         |
 | `deleteExpiredComments` | `WHERE created_at <= datetime('now', '-1 day')`                                           | Para el cron              |
 
-#### `D1LikeRepository` ✅
+#### `D1LikeRepository` 
 
 | Método          | Query                                                                           | Notas                           |
 | --------------- | ------------------------------------------------------------------------------- | ------------------------------- |
-| `addLike`       | `INSERT OR IGNORE INTO likes (story_id, ip_address, created_at) VALUES (?,?,?)` | ✅ Columna `story_id` corregida |
+| `addLike`       | `INSERT OR IGNORE INTO likes (story_id, ip_address, created_at) VALUES (?,?,?)` |  Columna `story_id` corregida |
 | `getLikesCount` | `SELECT COUNT(*) as count FROM likes WHERE story_id = ?`                        | `.first<{count:number}>()`      |
 | `hasUserLiked`  | `SELECT 1 FROM likes WHERE story_id = ? AND ip_address = ?`                     | Retorna `result !== null`       |
 
-#### `D1ModerationRepository` ✅
+#### `D1ModerationRepository` 
 
 | Método         | Query                                                                               | Notas                     |
 | -------------- | ----------------------------------------------------------------------------------- | ------------------------- |
-| `banIp`        | `INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?, ?)` | ✅ Corregido a 3 `?`      |
+| `banIp`        | `INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?, ?)` |  Corregido a 3 `?`      |
 | `isIpBanned`   | `SELECT ip_address FROM banned_ips WHERE ip_address = ?`                            | Retorna `result !== null` |
 | `getBannedIps` | `SELECT ip_address as ipAddress, banned_at as bannedAt`                             | Orden DESC                |
 | `unBanIp`      | `DELETE FROM banned_ips WHERE ip_address = ?`                                       | —                         |
 
-### `R2StorageService` ✅
+### `R2StorageService` 
 
 **Archivo:** `src/infrastructure/storage/R2StorageService.ts`
 **Dependencias:** `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`

@@ -7,6 +7,8 @@ import { D1ModerationRepository } from "../../infrastructure/repositories/D1Mode
 import { R2StorageService } from "../../infrastructure/storage/R2StorageService";
 import { GetActiveStoriesUseCase } from "../../application/use-cases/GetActiveStoriesUseCase";
 import { UnauthorizedError, BadRequestError } from "../../helpers/error";
+import { D1LikeRepository } from "../../infrastructure/repositories/D1LikeRepository";
+import { AddLikeUseCase } from "../../application/use-cases/AddLikeuseCase";
 
 export class StroriesController {
   static async getActive(c: Context) {
@@ -84,5 +86,28 @@ export class StroriesController {
       return c.json({ success: false, error: error.message }, 500);
     }
   }
-}
+  static async addLike(c: Context) {
+    try {
+      const storyId = c.req.param('id');
+      if (!storyId) {
+        throw new Error('Invalid story ID');
+      }
+      const clientIP = c.get('clientIp') || '';
+      const likeRepo = new D1LikeRepository(c.env.stories_manager);
+      const modRepo = new D1ModerationRepository(c.env.stories_manager);
 
+      const useCase = new AddLikeUseCase(likeRepo, modRepo);
+      await useCase.execute(storyId, clientIP);
+      return c.json({ success: true, message: 'Liked!' }, 201);
+
+    } catch (error: any) {
+      if (error.name === 'UnauthorizedError') {
+        return c.json({ success: false, error: error.message }, 403);
+      }
+      if (error.name === 'BadRequestError') {
+        return c.json({ success: false, error: error.message }, 400);
+      }
+      return c.json({ success: false, error: error.message }, 500);
+    }
+  }
+}
