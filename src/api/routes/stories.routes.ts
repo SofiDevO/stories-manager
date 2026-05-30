@@ -25,5 +25,8 @@ storiesRouter.post(
   StroriesController.addComment,
 );
 
+// post like on story
+storiesRouter.post("/:id/likes", ipBanMiddleware, StroriesController.addLike);
+
 // admin routes
 storiesRouter.post("/", authMiddleware, StroriesController.create);

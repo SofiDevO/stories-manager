@@ -1,9 +1,18 @@
 # Stories Manager
 
-> **Estado:** Alpha — capa de API operativa
-> **Última actualización:** 29 de mayo de 2026
+> **Estado:** Alpha — capa de API operativa y definiciones TypeScript arregladas
+> **Última actualización:** 30 de mayo de 2026
 
 API REST serverless para gestionar **historias efímeras en video** (al estilo Instagram/WhatsApp Stories), desplegada sobre **Cloudflare Workers** con arquitectura limpia (Clean Architecture / DDD).
+
+## Estado Actual del Proyecto (Resumen General)
+
+El proyecto se encuentra en una etapa funcional de infraestructura y API:
+- **Cloudflare D1 (SQLite):** Esquema configurado con integridad referencial para `stories`, `comments`, `likes`, `admins` y `banned_ips`.
+- **Cloudflare R2:** Integración con AWS SDK v3 para la generación de URLs pre-firmadas, permitiendo cargas directas de video desde el cliente.
+- **Arquitectura Limpia:** Capas de Dominio, Aplicación, API (Hono) e Infraestructura completamente separadas. Casos de uso como `CreateStoryUseCase` y `AddCommentUseCase` ya están implementados.
+- **Seguridad y Middlewares:** CORS dinámico configurado, protección de rutas con JWT y bloqueo de IPs maliciosas mediante middleware.
+- **Tipados (Workers):** Solucionado el problema con `CloudflareBindings`, logrando que TypeScript reconozca globalmente los bindings (D1, R2, variables de entorno) generados por Wrangler.
 
 ---
 
@@ -87,49 +96,57 @@ Flujo de dependencias:  API → Application → Domain ← Infrastructure
 ```
 stories-manager/
 ├── src/
-│   ├── index.ts                         # Punto de entrada: app Hono + cron handler
+│   ├── index.ts                           # Punto de entrada: app Hono + cron handler
+│   ├── ARCHITECTURE.md                    # Documentación: Clean Architecture y patrones
+│   ├── README.md                          # Documentación: Inicialización, CORS y Router
 │   ├── helpers/
-│   │   └── error.ts                     #  Jerarquía de errores HTTP tipados
+│   │   ├── error.ts                       # Jerarquía de errores HTTP tipados
+│   │   └── README.md                      # Documentación: Helpers de manejo de errores
 │   ├── api/
 │   │   ├── controllers/
-│   │   │   └── stories.controller.ts    #  StroriesController (3 métodos estáticos)
+│   │   │   ├── stories.controller.ts      # StoriesController (métodos estáticos)
+│   │   │   └── README.md                  # Documentación: Controladores (Orquestadores)
 │   │   ├── middlewares/
-│   │   │   ├── auth.middleware.ts        #  Validación JWT via hono/jwt
-│   │   │   └── ipBan.middleware.ts       #  Bloqueo de IPs baneadas
+│   │   │   ├── auth.middleware.ts         # Validación JWT via hono/jwt
+│   │   │   ├── ipBan.middleware.ts        # Bloqueo de IPs baneadas
+│   │   │   └── README.md                  # Documentación: Middlewares (Guardias)
 │   │   └── routes/
-│   │       └── stories.routes.ts        #  Router montado en /api/v1/stories
+│   │       ├── stories.routes.ts          # Router montado en /api/v1/stories
+│   │       └── README.md                  # Documentación: Rutas y Endpoints
 │   ├── application/
-│   │   ├── dtos/                        # (pendiente)
+│   │   ├── dtos/                          # Data Transfer Objects (pendiente)
 │   │   └── use-cases/
-│   │       ├── AddCommentUseCase.ts     #  Implementado
-│   │       └── CreateStoryUseCase.ts    #  Implementado
+│   │       ├── AddCommentUseCase.ts       # Valida IP y registra comentario
+│   │       ├── AddLikeuseCase.ts          # Registra likes validando duplicados
+│   │       ├── CleanExpiredDataUseCase.ts # Elimina stories y comentarios viejos
+│   │       ├── CreateStoryUseCase.ts      # Crea story y URL S3 pre-firmada
+│   │       ├── GetActiveStoriesUseCase.ts # Recupera stories no expiradas
+│   │       └── README.md                  # Documentación: Casos de Uso (Reglas)
 │   ├── domain/
 │   │   ├── entities/
-│   │   │   ├── Admin.ts
-│   │   │   ├── Comment.ts
-│   │   │   ├── Like.ts
-│   │   │   └── Story.ts
+│   │   │   ├── Admin.ts, Comment.ts, Like.ts, Story.ts
+│   │   │   └── README.md                  # Documentación: Entidades del Dominio
+│   │   ├── errors/                        # Definición de errores del dominio
 │   │   └── repositories/
-│   │       ├── IAdminRepository.ts
-│   │       ├── ICommentRepository.ts
-│   │       ├── ILikeRepository.ts
-│   │       ├── IModerationRepository.ts
-│   │       ├── IStorageService.ts
-│   │       └── IStoryRepository.ts
+│   │       ├── IAdminRepository.ts, ICommentRepository.ts, ILikeRepository.ts
+│   │       ├── IModerationRepository.ts, IStorageService.ts, IStoryRepository.ts
+│   │       └── README.md                  # Documentación: Interfaces de Repositorios
 │   └── infrastructure/
 │       ├── db/
-│       │   └── schema.sql
+│       │   ├── schema.sql                 # Tablas SQLite e integridad referencial
+│       │   └── README.md                  # Documentación: Esquema de BD
 │       ├── repositories/
-│       │   ├── D1StoryRepository.ts      #  Implementado
-│       │   ├── D1CommentRepository.ts    #  Implementado
-│       │   ├── D1LikeRepository.ts       #  Implementado
-│       │   ├── D1ModerationRepository.ts #  Implementado
-│       │   └── D1AdminRepository.ts      #  Implementado
+│       │   ├── D1AdminRepository.ts, D1CommentRepository.ts, D1LikeRepository.ts
+│       │   ├── D1ModerationRepository.ts, D1StoryRepository.ts
+│       │   └── README.md                  # Documentación: Implementaciones D1 (SQL)
 │       └── storage/
-│           └── R2StorageService.ts       #  Implementado (AWS SDK v3 + S3 presigned)
-├── package.json
-├── tsconfig.json
-└── wrangler.jsonc
+│           ├── R2StorageService.ts        # Generador de subidas pre-firmadas R2
+│           └── README.md                  # Documentación: Servicio de Storage
+├── .dev.vars                              # Variables de entorno secretas en desarrollo (local)
+├── package.json                           # Scripts (cf-typegen, deploy, dev) y dependencias
+├── tsconfig.json                          # Configuración estricta para TypeScript (ESNext)
+├── worker-configuration.d.ts              # Tipos generados automáticamente de CloudflareBindings
+└── wrangler.jsonc                         # Configuración de D1, R2, Cron y entorno de Workers
 ```
 
 ---
@@ -509,6 +526,18 @@ Configurado en `wrangler.jsonc` (excluido de git para proteger credenciales de p
 }
 ```
 
+#### Configuración del Bucket R2 (CORS y Acceso Público)
+
+Para que las cargas (uploads) directamente desde el navegador hacia R2 funcionen correctamente usando *Presigned URLs*, es necesario configurar las políticas de CORS en el bucket (`stories-bucket`).
+
+**Reglas CORS necesarias:**
+- **Orígenes permitidos:** El dominio de la aplicación en producción (o `*` para desarrollo).
+- **Métodos permitidos:** `PUT` (necesario para la subida), `GET` (para lectura).
+- **Encabezados permitidos:** `*` o específicos como `Content-Type`.
+
+**Acceso público:**
+Para que los videos sean accesibles sin autenticación, se debe configurar un dominio público o usar el subdominio `r2.dev` habilitado para el bucket. Este dominio se provee a la aplicación a través de la variable de entorno `PUBLIC_R2_URL`.
+
 ### Cron Trigger
 
 ```jsonc
@@ -610,3 +639,9 @@ pnpm deploy
 # Generar tipos de bindings de Cloudflare
 pnpm cf-typegen
 ```
+
+---
+
+## Correcciones aplicadas
+
+- **Tipos de CloudflareBindings:** Se resolvió el error de TypeScript `Cannot find name 'CloudflareBindings'` en `src/index.ts` regenerando los tipos del entorno con el comando `pnpm cf-typegen` (el cual ejecuta `wrangler types --env-interface CloudflareBindings`). Esto actualizó correctamente el archivo `worker-configuration.d.ts` para exponer la interfaz global esperada.
