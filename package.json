@@ -4,7 +4,12 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "create-admin": "node scripts/create-admin.js",
+    "create-admin:prod": "node scripts/create-admin.js --remote",
+    "db:init": "wrangler d1 execute stories-manager --local --file=src/infrastructure/db/schema.sql",
+    "db:init:prod": "wrangler d1 execute stories-manager --remote --file=src/infrastructure/db/schema.sql",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",

@@ -9,8 +9,29 @@ import { GetActiveStoriesUseCase } from "../../application/use-cases/GetActiveSt
 import { UnauthorizedError, BadRequestError } from "../../helpers/error";
 import { D1LikeRepository } from "../../infrastructure/repositories/D1LikeRepository";
 import { AddLikeUseCase } from "../../application/use-cases/AddLikeuseCase";
+import { GetStoryCommentsUseCase } from "../../application/use-cases/GetStoryCommentsUseCase";
+import { GetLikesCountUseCase } from "../../application/use-cases/GetLikesCountUseCase";
+import { DeleteStoryUseCase } from "../../application/use-cases/DeleteStoryUseCase";
 
 export class StroriesController {
+  static async deleteStory(c: Context) {
+    try {
+      const storyId = c.req.param("id");
+      if (!storyId) {
+        return c.json({ success: false, error: "Story ID is required" }, 400);
+      }
+      const storyRepo = new D1StoryRepository(c.env.stories_manager);
+      const useCase = new DeleteStoryUseCase(storyRepo);
+      await useCase.execute(storyId);
+      
+      return c.json({ success: true, message: "Story deleted successfully" }, 200);
+    } catch (error: any) {
+      if (error.name === "BadRequestError") {
+        return c.json({ success: false, error: error.message }, 400);
+      }
+      return c.json({ success: false, error: error.message }, 500);
+    }
+  }
   static async getActive(c: Context) {
     try {
       const storyRepo = new D1StoryRepository(c.env.stories_manager);
@@ -88,25 +109,54 @@ export class StroriesController {
   }
   static async addLike(c: Context) {
     try {
-      const storyId = c.req.param('id');
+      const storyId = c.req.param("id");
       if (!storyId) {
-        throw new Error('Invalid story ID');
+        throw new Error("Invalid story ID");
       }
-      const clientIP = c.get('clientIp') || '';
+      const clientIP = c.get("clientIp") || "";
       const likeRepo = new D1LikeRepository(c.env.stories_manager);
       const modRepo = new D1ModerationRepository(c.env.stories_manager);
 
       const useCase = new AddLikeUseCase(likeRepo, modRepo);
       await useCase.execute(storyId, clientIP);
-      return c.json({ success: true, message: 'Liked!' }, 201);
-
+      return c.json({ success: true, message: "Liked!" }, 201);
     } catch (error: any) {
-      if (error.name === 'UnauthorizedError') {
+      if (error.name === "UnauthorizedError") {
         return c.json({ success: false, error: error.message }, 403);
       }
-      if (error.name === 'BadRequestError') {
+      if (error.name === "BadRequestError") {
         return c.json({ success: false, error: error.message }, 400);
       }
+      return c.json({ success: false, error: error.message }, 500);
+    }
+  }
+
+  static async getComments(c: Context) {
+    try {
+      const storyId = c.req.param("id");
+      if (!storyId) {
+        throw new Error("Invalid story ID");
+      }
+
+      const commentRepo = new D1CommentRepository(c.env.stories_manager);
+      const useCase = new GetStoryCommentsUseCase(commentRepo);
+      const comments = await useCase.execute(storyId);
+      return c.json({ success: true, data: comments }, 200);
+    } catch (error: any) {
+      return c.json({ success: false, error: error.message }, 500);
+    }
+  }
+  static async getLikesCount(c: Context) {
+    try {
+      const storyId = c.req.param("id");
+      if (!storyId) {
+        throw new Error("Invalid story ID");
+      }
+      const likeRepo = new D1LikeRepository(c.env.stories_manager);
+      const useCase = new GetLikesCountUseCase(likeRepo);
+      const count = await useCase.execute(storyId);
+      return c.json({ success: true, data: count }, 200);
+    } catch (error: any) {
       return c.json({ success: false, error: error.message }, 500);
     }
   }

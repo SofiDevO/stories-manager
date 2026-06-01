@@ -5,17 +5,6 @@
 
 API REST serverless para gestionar **historias efímeras en video** (al estilo Instagram/WhatsApp Stories), desplegada sobre **Cloudflare Workers** con arquitectura limpia (Clean Architecture / DDD).
 
-## Estado Actual del Proyecto (Resumen General)
-
-El proyecto se encuentra en una etapa funcional de infraestructura y API:
-- **Cloudflare D1 (SQLite):** Esquema configurado con integridad referencial para `stories`, `comments`, `likes`, `admins` y `banned_ips`.
-- **Cloudflare R2:** Integración con AWS SDK v3 para la generación de URLs pre-firmadas, permitiendo cargas directas de video desde el cliente.
-- **Arquitectura Limpia:** Capas de Dominio, Aplicación, API (Hono) e Infraestructura completamente separadas. Casos de uso como `CreateStoryUseCase` y `AddCommentUseCase` ya están implementados.
-- **Seguridad y Middlewares:** CORS dinámico configurado, protección de rutas con JWT y bloqueo de IPs maliciosas mediante middleware.
-- **Tipados (Workers):** Solucionado el problema con `CloudflareBindings`, logrando que TypeScript reconozca globalmente los bindings (D1, R2, variables de entorno) generados por Wrangler.
-
----
-
 ## Tabla de contenidos
 
 1. [Stack tecnológico](#stack-tecnológico)
@@ -40,20 +29,22 @@ El proyecto se encuentra en una etapa funcional de infraestructura y API:
 A lo largo del código fuente hemos incluido una serie de lecciones (archivos Markdown) que explican el **por qué** de nuestras decisiones arquitectónicas, capa por capa. Son ideales como menú de lectura para entender a fondo la aplicación:
 
 ### Visión General
-*  **[Arquitectura General y Hono](./src/ARCHITECTURE.md):** Clean Architecture, el patrón de "Cebolla", y por qué usamos Hono.
-*  **[Punto de Entrada (Index)](./src/README.md):** Inicialización de Cloudflare Workers, CORS y eventos de Cron.
+
+- **[Arquitectura General y Hono](./src/ARCHITECTURE.md):** Clean Architecture, el patrón de "Cebolla", y por qué usamos Hono.
+- **[Punto de Entrada (Index)](./src/README.md):** Inicialización de Cloudflare Workers, CORS y eventos de Cron.
 
 ### Capas de la Arquitectura
-*  **[Entidades de Dominio](./src/domain/entities/README.md):** El núcleo de la aplicación, interfaces agnósticas y el lenguaje ubicuo.
-*  **[Interfaces de Repositorios](./src/domain/repositories/README.md):** Contratos de dominio y abstracción de datos.
-*  **[Casos de Uso (Reglas de Negocio)](./src/application/use-cases/README.md):** Lógica pura, inyección de dependencias y validaciones centrales.
-*  **[Controladores (Orquestadores)](./src/api/controllers/README.md):** Traductores entre HTTP/JSON y los casos de uso.
-*  **[Middlewares (Guardias)](./src/api/middlewares/README.md):** Protección de rutas, autenticación JWT y baneo de IPs.
-*  **[Rutas y Endpoints](./src/api/routes/README.md):** Enrutamiento declarativo en Hono.
-*  **[Implementación de Repositorios (D1)](./src/infrastructure/repositories/README.md):** Consultas preparadas en SQL puro sobre Cloudflare D1.
-*  **[Servicio de Almacenamiento (R2)](./src/infrastructure/storage/README.md):** Generación de "Presigned URLs" para cargas directas.
-*  **[Esquema de Base de Datos](./src/infrastructure/db/README.md):** Integridad referencial, claves foráneas y cascadas en SQLite.
-*  **[Manejo de Errores (Helpers)](./src/helpers/README.md):** Clases de error personalizadas y traducción de códigos HTTP.
+
+- **[Entidades de Dominio](./src/domain/entities/README.md):** El núcleo de la aplicación, interfaces agnósticas y el lenguaje ubicuo.
+- **[Interfaces de Repositorios](./src/domain/repositories/README.md):** Contratos de dominio y abstracción de datos.
+- **[Casos de Uso (Reglas de Negocio)](./src/application/use-cases/README.md):** Lógica pura, inyección de dependencias y validaciones centrales.
+- **[Controladores (Orquestadores)](./src/api/controllers/README.md):** Traductores entre HTTP/JSON y los casos de uso.
+- **[Middlewares (Guardias)](./src/api/middlewares/README.md):** Protección de rutas, autenticación JWT y baneo de IPs.
+- **[Rutas y Endpoints](./src/api/routes/README.md):** Enrutamiento declarativo en Hono.
+- **[Implementación de Repositorios (D1)](./src/infrastructure/repositories/README.md):** Consultas preparadas en SQL puro sobre Cloudflare D1.
+- **[Servicio de Almacenamiento (R2)](./src/infrastructure/storage/README.md):** Generación de "Presigned URLs" para cargas directas.
+- **[Esquema de Base de Datos](./src/infrastructure/db/README.md):** Integridad referencial, claves foráneas y cascadas en SQLite.
+- **[Manejo de Errores (Helpers)](./src/helpers/README.md):** Clases de error personalizadas y traducción de códigos HTTP.
 
 ---
 
@@ -95,6 +86,8 @@ Flujo de dependencias:  API → Application → Domain ← Infrastructure
 
 ```
 stories-manager/
+├── scripts/
+│   └── create-admin.js                    # Script para crear admins en DB (local/remoto)
 ├── src/
 │   ├── index.ts                           # Punto de entrada: app Hono + cron handler
 │   ├── ARCHITECTURE.md                    # Documentación: Clean Architecture y patrones
@@ -104,6 +97,8 @@ stories-manager/
 │   │   └── README.md                      # Documentación: Helpers de manejo de errores
 │   ├── api/
 │   │   ├── controllers/
+│   │   │   ├── admin.controller.ts        # AdminController (Baneo de IPs)
+│   │   │   ├── auth.controller.ts         # AuthController (Login de admins)
 │   │   │   ├── stories.controller.ts      # StoriesController (métodos estáticos)
 │   │   │   └── README.md                  # Documentación: Controladores (Orquestadores)
 │   │   ├── middlewares/
@@ -111,16 +106,26 @@ stories-manager/
 │   │   │   ├── ipBan.middleware.ts        # Bloqueo de IPs baneadas
 │   │   │   └── README.md                  # Documentación: Middlewares (Guardias)
 │   │   └── routes/
+│   │       ├── admin.routes.ts            # Router montado en /api/v1/admin
+│   │       ├── auth.routes.ts             # Router montado en /api/v1/auth
 │   │       ├── stories.routes.ts          # Router montado en /api/v1/stories
 │   │       └── README.md                  # Documentación: Rutas y Endpoints
 │   ├── application/
-│   │   ├── dtos/                          # Data Transfer Objects (pendiente)
+│   │   ├── dtos/
+│   │   │   └── CommentResponseDTO.ts      # DTOs para estructurar respuestas HTTP
 │   │   └── use-cases/
 │   │       ├── AddCommentUseCase.ts       # Valida IP y registra comentario
 │   │       ├── AddLikeuseCase.ts          # Registra likes validando duplicados
+│   │       ├── BanIpUseCase.ts            # Bloquea una IP en el sistema
 │   │       ├── CleanExpiredDataUseCase.ts # Elimina stories y comentarios viejos
 │   │       ├── CreateStoryUseCase.ts      # Crea story y URL S3 pre-firmada
+│   │       ├── DeleteStoryUseCase.ts      # Elimina una historia y sus comentarios/likes
 │   │       ├── GetActiveStoriesUseCase.ts # Recupera stories no expiradas
+│   │       ├── GetBannedIpsUseCase.ts     # Lista IPs bloqueadas
+│   │       ├── GetLikesCountUseCase.ts    # Devuelve cantidad de likes de una story
+│   │       ├── GetStoryCommentsUseCase.ts # Lista comentarios de una story
+│   │       ├── LoginAdminUseCase.ts       # Valida credenciales hash y devuelve username
+│   │       ├── UnbanIpUseCase.ts          # Remueve el bloqueo a una IP
 │   │       └── README.md                  # Documentación: Casos de Uso (Reglas)
 │   ├── domain/
 │   │   ├── entities/
@@ -205,6 +210,7 @@ interface Admin {
 | `create(story)`          | Persiste una nueva historia                 |
 | `getActiveStories()`     | Retorna las historias que no han expirado   |
 | `deleteExpiredStories()` | Limpieza automática (ejecutada por el cron) |
+| `deleteById(id)`         | Elimina una historia                        |
 
 #### `ICommentRepository`
 
@@ -250,7 +256,7 @@ interface Admin {
 
 Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **No depende** de Cloudflare, SQL ni HTTP.
 
-### `CreateStoryUseCase` 
+### `CreateStoryUseCase`
 
 **Archivo:** `src/application/use-cases/CreateStoryUseCase.ts`
 
@@ -267,7 +273,7 @@ Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **
 
 > La URL pre-firmada tiene una vigencia de **3600 segundos** (1 hora).
 
-### `AddCommentUseCase` 
+### `AddCommentUseCase`
 
 **Archivo:** `src/application/use-cases/AddCommentUseCase.ts`
 
@@ -280,14 +286,11 @@ Orquesta la lógica de negocio usando únicamente las interfaces del dominio. **
 3. Construye la entidad `Comment` con `crypto.randomUUID()` como `id` y `content.trim()`.
 4. Persiste via `ICommentRepository.create()`.
 
-### Casos de uso pendientes
+### Casos de uso realizados
 
-| Caso de uso               | Descripción                                   |
-| ------------------------- | --------------------------------------------- |
-| `AddLikeUseCase`          | Verifica duplicado por IP y registra el like  |
-| `LoginAdminUseCase`       | Verifica credenciales y emite JWT             |
-| `BanIpUseCase`            | Banea una IP (acción administrativa)          |
-| `CleanExpiredDataUseCase` | Limpia stories y comentarios expirados (cron) |
+| Caso de uso          | Descripción           |
+| -------------------- | --------------------- |
+| `DeleteStoryUseCase` | Eliminar una historia |
 
 ---
 
@@ -341,24 +344,21 @@ export const storiesRouter = new Hono<Env>();
 
 #### Rutas operativas
 
-| Método | Ruta completa                  | Middlewares       | Controlador  | Auth          |
-| ------ | ------------------------------ | ----------------- | ------------ | ------------- |
-| `GET`  | `/api/v1/stories`              | —                 | `getActive`  | No            |
-| `POST` | `/api/v1/stories/:id/comments` | `ipBanMiddleware` | `addComment` | No (IP check) |
-| `POST` | `/api/v1/stories`              | `authMiddleware`  | `create`     | JWT           |
+| Método   | Ruta completa                  | Middlewares       | Controlador     | Auth          |
+| -------- | ------------------------------ | ----------------- | --------------- | ------------- |
+| `GET`    | `/api/v1/stories`              | —                 | `getActive`     | No            |
+| `POST`   | `/api/v1/stories/:id/comments` | `ipBanMiddleware` | `addComment`    | No (IP check) |
+| `GET`    | `/api/v1/stories/:id/comments` | —                 | `getComments`   | No            |
+| `POST`   | `/api/v1/stories/:id/likes`    | `ipBanMiddleware` | `addLike`       | No (IP check) |
+| `GET`    | `/api/v1/stories/:id/likes`    | —                 | `getLikesCount` | No            |
+| `POST`   | `/api/v1/stories`              | `authMiddleware`  | `create`        | JWT           |
+| `POST`   | `/api/v1/auth/login`           | —                 | `login`         | No            |
+| `DELETE` | `/api/v1/stories/:id`          | `authMiddleware`  | `deleteStory`   | JWT           |
+| `GET`    | `/api/v1/admin/bans`           | `authMiddleware`  | `getBans`       | JWT           |
+| `POST`   | `/api/v1/admin/bans`           | `authMiddleware`  | `banIp`         | JWT           |
+| `DELETE` | `/api/v1/admin/bans/:ip`       | `authMiddleware`  | `unbanIp`       | JWT           |
 
 #### Rutas pendientes
-
-| Método   | Ruta                           | Descripción        | Auth          |
-| -------- | ------------------------------ | ------------------ | ------------- |
-| `GET`    | `/api/v1/stories/:id/comments` | Listar comentarios | No            |
-| `DELETE` | `/api/v1/stories/:id`          | Eliminar story     | Admin         |
-| `POST`   | `/api/v1/stories/:id/likes`    | Dar like           | No (IP check) |
-| `GET`    | `/api/v1/stories/:id/likes`    | Conteo de likes    | No            |
-| `GET`    | `/api/v1/admin/bans`           | IPs baneadas       | Admin         |
-| `POST`   | `/api/v1/admin/bans`           | Banear IP          | Admin         |
-| `DELETE` | `/api/v1/admin/bans/:ip`       | Desbanear IP       | Admin         |
-| `POST`   | `/api/v1/auth/login`           | Login admin        | No            |
 
 ### Controlador — `src/api/controllers/stories.controller.ts`
 
@@ -366,7 +366,7 @@ Clase con métodos estáticos que actúan como handlers de Hono. Cada método in
 
 #### `getActive(c)`
 
-Llama a `D1StoryRepository.getActiveStories()` y retorna `{ success: true, data: stories }` con HTTP 200. Sin manejo de errores (asume que D1 siempre responde).
+Llama a `D1StoryRepository.getActiveStories()` y retorna `{ success: true, data: stories }` con HTTP 200. Incluye manejo de errores capturando excepciones y devolviendo HTTP 500 en caso de fallo.
 
 #### `create(c)` — requiere JWT
 
@@ -416,7 +416,7 @@ export const ipBanMiddleware = createMiddleware<Env>(async (c, next) => {
 
 Todos los repositorios reciben un `D1Database` por constructor y usan la API de D1 (`prepare → bind → run/first/all`) con parámetros posicionales para prevenir SQL injection.
 
-#### `D1StoryRepository` 
+#### `D1StoryRepository`
 
 | Método                 | Query                                             | Notas                    |
 | ---------------------- | ------------------------------------------------- | ------------------------ |
@@ -426,33 +426,33 @@ Todos los repositorios reciben un `D1Database` por constructor y usan la API de 
 
 El período de expiración está hardcodeado en **24 horas**.
 
-#### `D1CommentRepository` 
+#### `D1CommentRepository`
 
 | Método                  | Query                                                                                     | Notas                     |
 | ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------- |
-| `create`                | `INSERT INTO comments (id, story_id, content, ip_address, created_at) VALUES (?,?,?,?,?)` |  SQL corregido          |
+| `create`                | `INSERT INTO comments (id, story_id, content, ip_address, created_at) VALUES (?,?,?,?,?)` | SQL corregido             |
 | `getByStoryId`          | `SELECT ... FROM comments WHERE story_id = ?`                                             | Alias camelCase correctos |
 | `deleteById`            | `DELETE FROM comments WHERE id = ?`                                                       | —                         |
 | `deleteExpiredComments` | `WHERE created_at <= datetime('now', '-1 day')`                                           | Para el cron              |
 
-#### `D1LikeRepository` 
+#### `D1LikeRepository`
 
-| Método          | Query                                                                           | Notas                           |
-| --------------- | ------------------------------------------------------------------------------- | ------------------------------- |
-| `addLike`       | `INSERT OR IGNORE INTO likes (story_id, ip_address, created_at) VALUES (?,?,?)` |  Columna `story_id` corregida |
-| `getLikesCount` | `SELECT COUNT(*) as count FROM likes WHERE story_id = ?`                        | `.first<{count:number}>()`      |
-| `hasUserLiked`  | `SELECT 1 FROM likes WHERE story_id = ? AND ip_address = ?`                     | Retorna `result !== null`       |
+| Método          | Query                                                                           | Notas                        |
+| --------------- | ------------------------------------------------------------------------------- | ---------------------------- |
+| `addLike`       | `INSERT OR IGNORE INTO likes (story_id, ip_address, created_at) VALUES (?,?,?)` | Columna `story_id` corregida |
+| `getLikesCount` | `SELECT COUNT(*) as count FROM likes WHERE story_id = ?`                        | `.first<{count:number}>()`   |
+| `hasUserLiked`  | `SELECT 1 FROM likes WHERE story_id = ? AND ip_address = ?`                     | Retorna `result !== null`    |
 
-#### `D1ModerationRepository` 
+#### `D1ModerationRepository`
 
 | Método         | Query                                                                               | Notas                     |
 | -------------- | ----------------------------------------------------------------------------------- | ------------------------- |
-| `banIp`        | `INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?, ?)` |  Corregido a 3 `?`      |
+| `banIp`        | `INSERT OR IGNORE INTO banned_ips (ip_address, reason, banned_at) VALUES (?, ?, ?)` | Corregido a 3 `?`         |
 | `isIpBanned`   | `SELECT ip_address FROM banned_ips WHERE ip_address = ?`                            | Retorna `result !== null` |
 | `getBannedIps` | `SELECT ip_address as ipAddress, banned_at as bannedAt`                             | Orden DESC                |
 | `unBanIp`      | `DELETE FROM banned_ips WHERE ip_address = ?`                                       | —                         |
 
-### `R2StorageService` 
+### `R2StorageService`
 
 **Archivo:** `src/infrastructure/storage/R2StorageService.ts`
 **Dependencias:** `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`
@@ -503,6 +503,46 @@ Uso actual en `AddCommentUseCase`:
 
 ---
 
+## Scripts y Administración
+
+### Crear un Administrador (`create-admin`)
+
+Para poder interactuar con las rutas protegidas de la API (como crear nuevas historias), necesitas generar al menos un usuario administrador. Ya que las contraseñas se almacenan mediante un cifrado unidireccional (SHA-256), creamos un script automatizado para facilitar esta tarea de manera segura.
+
+**Archivo del script:** `scripts/create-admin.js`
+
+El script puede leer las credenciales directamente de tus variables de entorno para mayor seguridad (evitando que queden registradas en el historial de tu terminal), o aceptarlas como argumentos. Si el usuario ya existe en la base de datos, el script lo ignora (`INSERT OR IGNORE`) para evitar sobreescribir datos por accidente.
+
+#### Variables de Entorno Requeridas
+
+Antes de ejecutar el script de forma limpia, asegúrate de tener las siguientes variables definidas en tu entorno del CI/CD o en tu archivo local `.dev.vars`:
+
+```env
+ADMIN_USERNAME=nombre_de_usuario
+ADMIN_PASSWORD=contraseña_super_secreta
+```
+
+#### Uso Local
+
+Para registrar tu administrador en tu base de datos D1 local (útil durante el desarrollo):
+
+```bash
+npm run create-admin
+```
+
+#### Uso en Producción
+
+Una vez que tengas tu Worker desplegado y la base de datos de producción inicializada (`npm run db:init:prod`), ejecuta el script añadiendo la bandera remota:
+
+```bash
+npm run create-admin:prod
+```
+
+> [!TIP]
+> **Modo manual de emergencia:** También puedes pasar los parámetros directamente a través de la terminal si no tienes las variables de entorno configuradas: `npm run create-admin:prod mi_usuario mi_password`.
+
+---
+
 ## Infraestructura Cloud
 
 Configurado en `wrangler.jsonc` (excluido de git para proteger credenciales de producción).
@@ -528,9 +568,10 @@ Configurado en `wrangler.jsonc` (excluido de git para proteger credenciales de p
 
 #### Configuración del Bucket R2 (CORS y Acceso Público)
 
-Para que las cargas (uploads) directamente desde el navegador hacia R2 funcionen correctamente usando *Presigned URLs*, es necesario configurar las políticas de CORS en el bucket (`stories-bucket`).
+Para que las cargas (uploads) directamente desde el navegador hacia R2 funcionen correctamente usando _Presigned URLs_, es necesario configurar las políticas de CORS en el bucket (`stories-bucket`).
 
 **Reglas CORS necesarias:**
+
 - **Orígenes permitidos:** El dominio de la aplicación en producción (o `*` para desarrollo).
 - **Métodos permitidos:** `PUT` (necesario para la subida), `GET` (para lectura).
 - **Encabezados permitidos:** `*` o específicos como `Content-Type`.
@@ -586,6 +627,41 @@ CREATE TABLE IF NOT EXISTS banned_ips (
 );
 ```
 
+### Diagrama Entidad-Relación
+
+```mermaid
+erDiagram
+    stories ||--o{ comments : "has many"
+    stories ||--o{ likes : "has many"
+
+    stories {
+        TEXT id PK
+        TEXT video_url
+        TEXT created_at
+    }
+    comments {
+        TEXT id PK
+        TEXT story_id FK "ON DELETE CASCADE"
+        TEXT content
+        TEXT ip_address
+        TEXT created_at
+    }
+    likes {
+        TEXT story_id FK "ON DELETE CASCADE"
+        TEXT ip_address
+        TEXT created_at
+    }
+    admins {
+        TEXT username PK
+        TEXT password_hash
+    }
+    banned_ips {
+        TEXT ip_address PK
+        TEXT reason
+        TEXT banned_at
+    }
+```
+
 ### Aplicar migraciones
 
 ```bash
@@ -639,9 +715,3 @@ pnpm deploy
 # Generar tipos de bindings de Cloudflare
 pnpm cf-typegen
 ```
-
----
-
-## Correcciones aplicadas
-
-- **Tipos de CloudflareBindings:** Se resolvió el error de TypeScript `Cannot find name 'CloudflareBindings'` en `src/index.ts` regenerando los tipos del entorno con el comando `pnpm cf-typegen` (el cual ejecuta `wrangler types --env-interface CloudflareBindings`). Esto actualizó correctamente el archivo `worker-configuration.d.ts` para exponer la interfaz global esperada.

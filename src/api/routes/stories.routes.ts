@@ -25,8 +25,15 @@ storiesRouter.post(
   StroriesController.addComment,
 );
 
+// get comments on story
+storiesRouter.get("/:id/comments", StroriesController.getComments);
+
 // post like on story
 storiesRouter.post("/:id/likes", ipBanMiddleware, StroriesController.addLike);
 
+// get likes count on story
+storiesRouter.get("/:id/likes", StroriesController.getLikesCount);
+
 // admin routes
 storiesRouter.post("/", authMiddleware, StroriesController.create);
+storiesRouter.delete("/:id", authMiddleware, StroriesController.deleteStory);

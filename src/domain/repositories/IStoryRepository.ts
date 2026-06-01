@@ -4,4 +4,5 @@ export interface IStoryRepository {
   create(story: Story): Promise<void>;
   getActiveStories(): Promise<Story[]>;
   deleteExpiredStories(): Promise<void>;
+  deleteStory(id: string): Promise<void>;
 }

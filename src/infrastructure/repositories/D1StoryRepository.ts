@@ -20,4 +20,10 @@ export class D1StoryRepository implements IStoryRepository{
             "DELETE FROM stories WHERE created_at <= datetime('now','-1 day')"
         ).run();
     }
+
+    async deleteStory(id: string): Promise<void>{
+        await this.db.prepare(
+            "DELETE FROM stories WHERE id = ?"
+        ).bind(id).run();
+    }
 }

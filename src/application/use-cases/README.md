@@ -6,8 +6,15 @@ Si observamos el directorio `src/application/use-cases`, encontraremos cuatro ar
 
 1. `AddCommentUseCase.ts`
 2. `AddLikeuseCase.ts`
-3. `CreateStoryUseCase.ts`
-4. `GetActiveStoriesUseCase.ts`
+3. `BanIpUseCase.ts`
+4. `CreateStoryUseCase.ts`
+5. `DeleteStoryUseCase.ts`
+6. `GetActiveStoriesUseCase.ts`
+7. `GetBannedIpsUseCase.ts`
+8. `GetStoryCommentsUseCase.ts`
+9. `GetLikesCountUseCase.ts`
+10. `LoginAdminUseCase.ts`
+11. `UnbanIpUseCase.ts`
 
 Vamos a desglosar cómo funcionan, qué conceptos aplican y, lo más importante, **por qué** los hemos estructurado de esta manera.
 
